@@ -13,6 +13,8 @@ CesiumFPS.App = (function () {
     function create3DMap() {
         // For more information on Cesium World Terrain, see https://cesium.com/content/cesiumworldterrain
 
+        var loadingIndicator = document.getElementById('loadingIndicator');
+
         viewer = new Cesium.Viewer('cesiumContainer', {
             terrainProvider: Cesium.createWorldTerrain()
         });
@@ -29,11 +31,12 @@ CesiumFPS.App = (function () {
             console.log("terran url: " + endUserOptions.terrain);
         }
         else {
-            scene.primitives.add(
+           /* scene.primitives.add(
                 new Cesium.Cesium3DTileset({
                     url: Cesium.IonResource.fromAssetId(6074)
                 })
             );
+            */
         }
 
         var heading = 0;
@@ -77,6 +80,8 @@ CesiumFPS.App = (function () {
         }
 
         cesiumFPSCameraController = new CesiumFPS.CesiumFPSCameraController(viewer);
+
+        loadingIndicator.style.display = 'none';
     }
 
     // event handlers

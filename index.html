@@ -11,16 +11,20 @@
     <script src="js/lib/ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="js/lib/ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
     <script src="./CesiumUnminified_1.51/Cesium.js"></script>
+    <link rel="stylesheet" href="./CesiumUnminified_1.51/Widgets/widgets.css">
+    <link rel="stylesheet" href="./CesiumUnminified_1.51/Widgets/lighter.css">
+    <link rel="stylesheet" href="./css/App.css">
 
-    <style>
-        @import url(./CesiumUnminified_1.51/Widgets/widgets.css);
-        @import url(./CesiumUnminified_1.51/Widgets/lighter.css);
-        @import url(./css/App.css);
+    <!--<style>-->
+        <!--@import url(./CesiumUnminified_1.51/Widgets/widgets.css);-->
+        <!--@import url(./CesiumUnminified_1.51/Widgets/lighter.css);-->
+        <!--@import url(./css/App.css);-->
 
-    </style>
+    <!--</style>-->
 </head>
 <body>
 <div id="cesiumContainer"></div>
+<div id="loadingIndicator" class="loadingIndicator"></div>
 <div id="toolbar">
         <table style="position: relative; left: 23px;">
             <tbody>
