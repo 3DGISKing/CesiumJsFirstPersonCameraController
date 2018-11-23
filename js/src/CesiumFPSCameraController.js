@@ -9,7 +9,7 @@ CesiumFPS.CesiumFPSCameraController = (function () {
 
     var HUMAN_WALKING_SPEED = 1.5;
 
-    var HUMAN_EYE_HEIGHT = 10; // 1.4;
+    var HUMAN_EYE_HEIGHT = 1.65;
     var MAX_PITCH_IN_DEGREE = 88;
     var ROTATE_SPEED = -5;
 
