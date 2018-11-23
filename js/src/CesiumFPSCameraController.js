@@ -1,31 +1,36 @@
 CesiumFPS.CesiumFPSCameraController = (function () {
     // this mean person is stop
-    var DIRECTION_NONE = 0;
+    var DIRECTION_NONE = -1;
 
-    var DIRECTION_FORWARD = 1;
-    var BACKWARD_DIRECTION = -1;
-
-    var STEER_NONE = 0;
-    var STEER_RIGHT = 1;
-    var STEER_LEFT = -1;
-
-    var HEADING_STEP = 4; // in degree
+    var DIRECTION_FORWARD = 0;
+    var DIRECTION_BACKWARD = 1;
+    var DIRECTION_LEFT = 2;
+    var DIRECTION_RIGHT = 3;
 
     var HUMAN_WALKING_SPEED = 1.5;
 
     var HUMAN_EYE_HEIGHT = 10; // 1.4;
+    var MAX_PITCH_IN_DEGREE = 88;
+    var ROTATE_SPEED = -5;
 
     //constructor
     function _(cesiumViewer) {
         this._enabled = false;
         this._cesiumViewer = cesiumViewer;
+        this._canvas = cesiumViewer.canvas;
         this._camera = cesiumViewer.camera;
 
         this._direction = DIRECTION_NONE;
         this._walkingSpeed = HUMAN_WALKING_SPEED;
-        this._steer = STEER_NONE;
 
-        this._heading = 0; // in radians
+        /**
+         * heading: angle with up direction
+         * pitch:   angle with right direction
+         * roll:    angle with look at direction
+         */
+
+        // indicate if heading and pitch is changed
+        this._looking = false;
 
         this._init();
     }
@@ -33,14 +38,31 @@ CesiumFPS.CesiumFPSCameraController = (function () {
     _.prototype._init = function () {
         var canvas = this._cesiumViewer.canvas;
 
+        this._startMousePosition = null;
+        this._mousePosition = null;
+
+        this._screenSpaceHandler = new Cesium.ScreenSpaceEventHandler(canvas);
+
+        var self = this;
+
+        this._screenSpaceHandler.setInputAction(function(movement) {
+            self._onMouseLButtonClicked(movement)
+        }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+        this._screenSpaceHandler.setInputAction(function(movement) {
+            self._onMouseMove(movement);
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+        this._screenSpaceHandler.setInputAction(function(movement) {
+            self._onMouseUp(movement);
+        }, Cesium.ScreenSpaceEventType.LEFT_UP);
+
         // needed to put focus on the canvas
         canvas.setAttribute('tabindex', '0');
 
         canvas.onclick = function() {
             canvas.focus();
         };
-
-        var self = this;
 
         document.addEventListener('keydown', function(e) {
             self._onKeyDown(e.keyCode);
@@ -122,24 +144,23 @@ CesiumFPS.CesiumFPSCameraController = (function () {
 
     _.prototype._onKeyDown = function (keyCode) {
         this._direction = DIRECTION_NONE;
-        this._steer = STEER_NONE;
 
         switch (keyCode) {
             case 'W'.charCodeAt(0):
                 this._direction = DIRECTION_FORWARD;
                 return;
             case 'S'.charCodeAt(0):
-                this._direction = BACKWARD_DIRECTION;
+                this._direction = DIRECTION_BACKWARD;
                 return;
             case 'Q'.charCodeAt(0):
                 return 'moveUp';
             case 'E'.charCodeAt(0):
                 return 'moveDown';
             case 'D'.charCodeAt(0):
-                this._steer = STEER_RIGHT;
+                this._direction = DIRECTION_RIGHT;
                 return;
             case 'A'.charCodeAt(0):
-                this._steer = STEER_LEFT;
+                this._direction = DIRECTION_LEFT;
                 return;
             default:
                 return undefined;
@@ -150,22 +171,83 @@ CesiumFPS.CesiumFPSCameraController = (function () {
         this._direction = DIRECTION_NONE;
     };
 
+    _.prototype._onMouseLButtonClicked = function (movement) {
+        this._looking = true;
+        this._mousePosition = this._startMousePosition = Cesium.Cartesian3.clone(movement.position);
+    };
+
+    _.prototype._onMouseMove = function (movement) {
+        this._mousePosition = movement.endPosition;
+    };
+
+    _.prototype._onMouseUp = function (position) {
+        this._looking = false;
+    };
+
+    _.prototype._changeHeadingPitch = function (dt) {
+        var width = this._canvas.clientWidth;
+        var height = this._canvas.clientHeight;
+
+        // Coordinate (0.0, 0.0) will be where the mouse was clicked.
+        var deltaX = (this._mousePosition.x - this._startMousePosition.x) / width;
+        var deltaY = -(this._mousePosition.y - this._startMousePosition.y) / height;
+
+        var currentHeadingInDegree = Cesium.Math.toDegrees(this._camera.heading);
+        var deltaHeadingInDegree = (deltaX * ROTATE_SPEED);
+        var newHeadingInDegree = currentHeadingInDegree + deltaHeadingInDegree;
+
+        var currentPitchInDegree = Cesium.Math.toDegrees(this._camera.pitch);
+        var deltaPitchInDegree = (deltaY * ROTATE_SPEED);
+        var newPitchInDegree = currentPitchInDegree + deltaPitchInDegree;
+
+        console.log( "rotationSpeed: " + ROTATE_SPEED + " deltaY: " + deltaY + " deltaPitchInDegree" + deltaPitchInDegree);
+
+        if( newPitchInDegree > MAX_PITCH_IN_DEGREE * 2 && newPitchInDegree < 360 - MAX_PITCH_IN_DEGREE) {
+            newPitchInDegree = 360 - MAX_PITCH_IN_DEGREE;
+        }
+        else {
+            if (newPitchInDegree > MAX_PITCH_IN_DEGREE && newPitchInDegree < 360 - MAX_PITCH_IN_DEGREE) {
+                newPitchInDegree = MAX_PITCH_IN_DEGREE;
+            }
+        }
+
+        this._camera.setView({
+            orientation: {
+                heading : Cesium.Math.toRadians(newHeadingInDegree),
+                pitch : Cesium.Math.toRadians(newPitchInDegree),
+                roll : this._camera.roll
+            }
+        });
+    };
+
     _.prototype._onClockTick = function (clock) {
         if(!this._enabled)
             return;
 
         var dt = clock._clockStep;
 
-        var distance = this._walkingSpeed * this._direction * dt;
+        if(this._looking)
+            this._changeHeadingPitch(dt);
 
-        if(this._direction == DIRECTION_NONE && this._steer == STEER_NONE)
+        var distance = this._walkingSpeed * dt;
+
+        if(this._direction == DIRECTION_NONE)
             return;
 
-        var currentCameraLookAtDirection = this._camera.direction;
+        var direction = new Cesium.Cartesian3();
+
+        if(this._direction == DIRECTION_FORWARD)
+            Cesium.Cartesian3.multiplyByScalar(this._camera.direction, 1, direction);
+        else if(this._direction == DIRECTION_BACKWARD)
+            Cesium.Cartesian3.multiplyByScalar(this._camera.direction, -1, direction);
+        else if(this._direction == DIRECTION_LEFT)
+            Cesium.Cartesian3.multiplyByScalar(this._camera.right, -1, direction);
+        else if(this._direction == DIRECTION_RIGHT)
+            Cesium.Cartesian3.multiplyByScalar(this._camera.right, 1, direction);
 
         var stepPosition = new Cesium.Cartesian3();
 
-        Cesium.Cartesian3.multiplyByScalar(currentCameraLookAtDirection, distance, stepPosition);
+        Cesium.Cartesian3.multiplyByScalar(direction, distance, stepPosition);
 
         var currentCameraPosition = this._camera.position;
 
@@ -194,32 +276,15 @@ CesiumFPS.CesiumFPSCameraController = (function () {
 
         ellipsoid.cartographicToCartesian(cartographic, endPosition);
 
-        // determine heading
-
-        var deltaHeading = Cesium.Math.toRadians(HEADING_STEP * this._steer * dt);
-
-        this._heading += deltaHeading;
-
-        // update camera
-        /*
-        // this is source level
-
-        this._camera.position = endPosition;
-        this._camera._adjustOrthographicFrustum(true);
-        */
-
-        // api level
-
         this._camera.setView({
             destination: endPosition,
-            orientation: new Cesium.HeadingPitchRoll(this._heading, 0, 0),
+            orientation: new Cesium.HeadingPitchRoll(this._camera.heading, this._camera.pitch, this._camera.roll),
             endTransform : Cesium.Matrix4.IDENTITY
         });
 
         // initialize
 
         this._direction = DIRECTION_NONE;
-        this._steer = STEER_NONE;
     };
 
     return _;

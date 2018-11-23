@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Source" type="javaScript">
+    <properties>
+      <sourceFilesUrls>
+        <item url="file://E:/0Task/Cesium/cesiumfps/Source" />
+      </sourceFilesUrls>
+    </properties>
+    <CLASSES>
+      <root url="file://E:/0Task/Cesium/cesiumfps/Source" />
+    </CLASSES>
+    <SOURCES />
+  </library>
+</component>

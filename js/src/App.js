@@ -2,6 +2,8 @@ CesiumFPS.App = (function () {
     var viewer = null;
     var cesiumFPSCameraController = null;
 
+    var endUserOptions = Cesium.queryToObject(window.location.search.substring(1));
+
     function start() {
         create3DMap();
         initInterface();
@@ -17,15 +19,36 @@ CesiumFPS.App = (function () {
 
         var scene = viewer.scene;
 
-        var tileset = scene.primitives.add(
-            new Cesium.Cesium3DTileset({
-                url: Cesium.IonResource.fromAssetId(6074)
-            })
-        );
+        if(Cesium.defined(endUserOptions.terrain)) {
+            var tileset = scene.primitives.add(
+                new Cesium.Cesium3DTileset({
+                    url: endUserOptions.terrain
+                })
+            );
+        }
+
+        var heading = 0;
+        var pitch = 0;
+        var roll = 0;
+
+        var lat = 0;
+        var long = 0;
+        var altitude = 1000;
+
+        if(Cesium.defined(endUserOptions.lat))
+            lat = parseFloat(endUserOptions.lat);
+
+        if(Cesium.defined(endUserOptions.long))
+            long = parseFloat(endUserOptions.long);
+
+        if(Cesium.defined(endUserOptions.heading))
+            heading = parseFloat(endUserOptions.heading);
 
         viewer.camera.setView({
-            destination: new Cesium.Cartesian3(1216403.8845586285, -4736357.493351395, 4081299.715698949),
-            orientation: new Cesium.HeadingPitchRoll(4.2892217081808806, -0.4799070147502502, 6.279789177843313),
+            destination: new Cesium.Cartesian3.fromDegrees(long, lat, altitude),
+            orientation: new Cesium.HeadingPitchRoll(Cesium.Math.toRadians(heading),
+                                                     Cesium.Math.toRadians(pitch),
+                                                     Cesium.Math.toRadians(roll)),
             endTransform : Cesium.Matrix4.IDENTITY
         });
 
