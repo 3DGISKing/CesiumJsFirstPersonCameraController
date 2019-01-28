@@ -1,4 +1,0 @@
-CesiumFPS.Option = (function () {
-
-
-})();
