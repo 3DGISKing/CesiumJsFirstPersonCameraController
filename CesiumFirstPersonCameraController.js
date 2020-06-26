@@ -131,9 +131,11 @@ Cesium.FirstPersonCameraController = (function () {
         });
     };
 
-    let scratchDirection = new Cartesian3();
-    let scratchStepPosition = new Cartesian3();
-    let scratchEndPosition = new Cartesian3();
+    let scratchCurrentDirection = new Cartesian3();
+    let scratchDeltaPosition = new Cartesian3();
+    let scratchNextPosition = new Cartesian3();
+    let scratchTerrainConsideredNextPosition = new Cartesian3();
+    let scratchNextCartographic = new Cesium.Cartographic();
 
     CesiumFirstPersonCameraController.prototype._onClockTick = function (clock) {
         if(!this._enabled)
@@ -144,36 +146,35 @@ Cesium.FirstPersonCameraController = (function () {
         if(this._looking)
             this._changeHeadingPitch(dt);
 
-        let distance = this._walkingSpeed() * dt;
-
         if(this._direction === DIRECTION_NONE)
             return;
 
-        if(this._direction === DIRECTION_FORWARD)
-            Cartesian3.multiplyByScalar(this._camera.direction, 1, scratchDirection);
-        else if(this._direction === DIRECTION_BACKWARD)
-            Cartesian3.multiplyByScalar(this._camera.direction, -1, scratchDirection);
-        else if(this._direction === DIRECTION_LEFT)
-            Cartesian3.multiplyByScalar(this._camera.right, -1, scratchDirection);
-        else if(this._direction === DIRECTION_RIGHT)
-            Cartesian3.multiplyByScalar(this._camera.right, 1, scratchDirection);
+        let distance = this._walkingSpeed() * dt;
 
-        Cartesian3.multiplyByScalar(scratchDirection, distance, scratchStepPosition);
+        if(this._direction === DIRECTION_FORWARD)
+            Cartesian3.multiplyByScalar(this._camera.direction, 1, scratchCurrentDirection);
+        else if(this._direction === DIRECTION_BACKWARD)
+            Cartesian3.multiplyByScalar(this._camera.direction, -1, scratchCurrentDirection);
+        else if(this._direction === DIRECTION_LEFT)
+            Cartesian3.multiplyByScalar(this._camera.right, -1, scratchCurrentDirection);
+        else if(this._direction === DIRECTION_RIGHT)
+            Cartesian3.multiplyByScalar(this._camera.right, 1, scratchCurrentDirection);
+
+        Cartesian3.multiplyByScalar(scratchCurrentDirection, distance, scratchDeltaPosition);
 
         let currentCameraPosition = this._camera.position;
 
-        Cartesian3.add(currentCameraPosition, scratchStepPosition, scratchEndPosition);
+        Cartesian3.add(currentCameraPosition, scratchDeltaPosition, scratchNextPosition);
 
         // consider terrain height
 
         let globe = this._cesiumViewer.scene.globe;
         let ellipsoid = globe.ellipsoid;
 
-        let cartographic = new Cesium.Cartographic();
+        // get height for next update position
+        ellipsoid.cartesianToCartographic(scratchNextPosition, scratchNextCartographic);
 
-        ellipsoid.cartesianToCartographic(scratchEndPosition, cartographic);
-
-        let height = globe.getHeight(cartographic);
+        let height = globe.getHeight(scratchNextCartographic);
 
         if(height === undefined) {
             console.warn('height is undefined!');
@@ -184,19 +185,15 @@ Cesium.FirstPersonCameraController = (function () {
             console.warn(`height is negative!`);
         }
 
-        cartographic.height = height + HUMAN_EYE_HEIGHT;
+        scratchNextCartographic.height = height + HUMAN_EYE_HEIGHT;
 
-        ellipsoid.cartographicToCartesian(cartographic, scratchEndPosition);
+        ellipsoid.cartographicToCartesian(scratchNextCartographic, scratchTerrainConsideredNextPosition);
 
         this._camera.setView({
-            destination: scratchEndPosition,
+            destination: scratchTerrainConsideredNextPosition,
             orientation: new Cesium.HeadingPitchRoll(this._camera.heading, this._camera.pitch, this._camera.roll),
             endTransform : Cesium.Matrix4.IDENTITY
         });
-
-        // initialize
-
-        this._direction = DIRECTION_NONE;
     };
 
     CesiumFirstPersonCameraController.prototype._walkingSpeed = function (){
