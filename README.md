@@ -1,4 +1,13 @@
-# CesiumFirstPersonCameraController
+## How to use
+var viewer = new Cesium.Viewer("cesiumContainer");
+
+var firstPersonCameraController = new Cesium.FirstPersonCameraController({
+   cesiumViewer : viewer
+});
+
+firstPersonCameraController.start();
+
+[![](http://img.youtube.com/vi/LZSScc82PQs/0.jpg)](http://www.youtube.com/watch?v=LZSScc82PQs "")
 
 # Hi, Enjoy my code.
 I am finding a long term GIS project.
