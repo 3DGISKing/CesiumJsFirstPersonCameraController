@@ -259,7 +259,7 @@ Cesium.FirstPersonCameraController = (function () {
     CesiumFirstPersonCameraController.prototype.stop = function () {
         this._enabled = false;
 
-        this._enableDefaultScreenSpaceCameraController(false);
+        this._enableDefaultScreenSpaceCameraController(true);
     };
 
     return CesiumFirstPersonCameraController;
